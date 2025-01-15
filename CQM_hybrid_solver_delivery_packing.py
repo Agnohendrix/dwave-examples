@@ -137,26 +137,52 @@ sampleset = cqm_sampler.sample_cqm(cqm, time_limit=10)
 print(sampleset.info)
 
 #Process results
-feasible_solutions = np.where(sampleset.record.is_feasible == True)
+feasible_solutions = sampleset.filter(lambda d: d.is_feasible)
 
-if len(feasible_solutions[0]):
-    #Get the first feasible solution
-    first = np.where(sampleset.record[feasible_solutions[0][0]][0] == 1)    
+if len(feasible_solutions):
+
+    #Get the first feasible solution  
+    first_feasible_sol = feasible_solutions.first.sample
+     
 
     problem_array = np.zeros((3, 4)).astype(int)
     for i in range(num_items):
         problem_array[-1 * (priority[i]-3)][-1 * (days_since_order[i] - 3)] += 1
     
     print("PROBLEM:")
-    print('Days since order was placed')
+    print('\t  Days since order was placed')
     print('Priority |   3     2     1     0')
     
     for i in range(3):
-        print(str(-1*(i-3)),'        ', str(problem_array[i][0]),'   ',str(problem_array[i][1]),'  ', str(problem_array[i][2]),'    ', str(problem_array[i][3]))
+        print('{:>5s}{:>10s}{:>5s}{:>5s}{:>5s}'.format(str(-1*(i- 3)), 
+                str(problem_array[i][0]), str(problem_array[i][1]),
+                str(problem_array[i][2]), str(problem_array[i][3])))
+
+
+    # Calculate number of packages with each priority and number of days since
+    # order in the solution
+    chosen = [i for i in first_feasible_sol if first_feasible_sol[i] == 1]
+    total_weight = quicksum(cost[i] for i in chosen) 
+    solution_priorities = [priority[i] for i in chosen] 
+    solution_days_since_order = [days_since_order[i] for i in chosen]
     
+    # Packages with higher priority (upper row) and the most days since the
+    # order (left most column) should be prioritized in the selection
+    results_array = np.zeros((3, 4)).astype(int) 
+    for i in chosen:
+        results_array[-1 * (priority[i]-3)][-1 * (days_since_order[i] - 3)] += 1
 
+    print("SOLUTION:")
+    print('\t  Days since order was placed')
+    print('Priority |   3     2     1     0')
 
+    for i in range(3): 
+        print('{:>5s}{:>10s}{:>5s}{:>5s}{:>5s}'.format(str(-1*(i - 3)),
+                str(results_array[i][0]), str(results_array[i][1]),
+                str(results_array[i][2]), str(results_array[i][3])))
 
+    print(("\nTotal number of selected items: {}".format(len(chosen))))
+    print("Total weight of selected items: {}".format(total_weight))
 
-
-
+else:
+    print("\nNo feasible solution found.\n")
